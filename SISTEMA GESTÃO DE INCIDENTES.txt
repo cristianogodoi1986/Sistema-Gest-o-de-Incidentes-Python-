@@ -1,0 +1,361 @@
+"""
+═══════════════════════════════════════════════════════════════════════
+PARTE 2 - EXECUÇÃO E GERAÇÃO DE RELATÓRIOS
+═══════════════════════════════════════════════════════════════════════
+EXECUTE ESTA CÉLULA DEPOIS DA PARTE 1!
+═══════════════════════════════════════════════════════════════════════
+"""
+
+print("🚀 PARTE 2: Iniciando análise completa...\n")
+
+# ============================================================================
+# CARREGA OS DADOS
+# ============================================================================
+
+df, filename = carregar_planilha()
+
+if df is None:
+    print("❌ Erro no upload. Tente novamente!")
+else:
+    # Identifica colunas
+    colunas = identificar_colunas(df)
+    
+    # Prepara dados
+    df_clean = preparar_dados(df, colunas)
+    
+    # ============================================================================
+    # GERA GRÁFICOS
+    # ============================================================================
+    
+    print("📊 Gerando gráficos...\n")
+    os.makedirs('graficos', exist_ok=True)
+    
+    graficos = []
+    data_analise = datetime.now().strftime('%d/%m/%Y')
+    
+    # GRÁFICO 1: Status Operacional
+    if colunas['status_operacional']:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+        
+        status_counts = df_clean[colunas['status_operacional']].value_counts()
+        colors = ['#06D6A0' if 'aberto' in str(s).lower() else '#EF476F' 
+                  if 'violado' in str(s).lower() else '#FFD166' for s in status_counts.index]
+        
+        ax1.barh(status_counts.index, status_counts.values, color=colors)
+        ax1.set_title('📊 STATUS OPERACIONAL', fontsize=14, fontweight='bold')
+        ax1.set_xlabel('Quantidade', fontsize=11, fontweight='bold')
+        
+        for i, v in enumerate(status_counts.values):
+            ax1.text(v, i, f' {v}', va='center', fontweight='bold')
+        
+        ax2.pie(status_counts.values, labels=status_counts.index, autopct='%1.1f%%',
+                colors=colors, startangle=90)
+        ax2.set_title('PROPORÇÃO', fontsize=14, fontweight='bold')
+        
+        plt.tight_layout()
+        plt.savefig('graficos/01_status.jpg', dpi=300, bbox_inches='tight')
+        graficos.append('graficos/01_status.jpg')
+        plt.close()
+        print("✅ Gráfico 1: Status Operacional")
+    
+    # GRÁFICO 2: ANS
+    if colunas['mns_status_ans']:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+        
+        ans_counts = df_clean[colunas['mns_status_ans']].value_counts()
+        colors = ['#EF476F' if 'violado' in str(s).lower() else '#06D6A0' 
+                  for s in ans_counts.index]
+        
+        ax1.barh(ans_counts.index, ans_counts.values, color=colors)
+        ax1.set_title('⚠️ STATUS ANS', fontsize=14, fontweight='bold')
+        ax1.set_xlabel('Quantidade', fontsize=11, fontweight='bold')
+        
+        for i, v in enumerate(ans_counts.values):
+            perc = v/len(df_clean)*100
+            ax1.text(v, i, f' {v} ({perc:.1f}%)', va='center', fontweight='bold')
+        
+        explode = [0.1 if 'violado' in str(s).lower() else 0 for s in ans_counts.index]
+        ax2.pie(ans_counts.values, labels=ans_counts.index, autopct='%1.1f%%',
+                colors=colors, explode=explode, startangle=90)
+        ax2.set_title('PROPORÇÃO ANS', fontsize=14, fontweight='bold')
+        
+        plt.tight_layout()
+        plt.savefig('graficos/02_ans.jpg', dpi=300, bbox_inches='tight')
+        graficos.append('graficos/02_ans.jpg')
+        plt.close()
+        print("✅ Gráfico 2: Status ANS")
+    
+    # GRÁFICO 3: Solucionadores
+    if colunas['solucionador']:
+        fig, ax = plt.subplots(figsize=(14, 8))
+        
+        top_soluc = df_clean[colunas['solucionador']].value_counts().head(10)
+        colors = plt.cm.viridis(np.linspace(0.3, 0.9, len(top_soluc)))
+        
+        bars = ax.barh(range(len(top_soluc)), top_soluc.values, color=colors)
+        ax.set_yticks(range(len(top_soluc)))
+        ax.set_yticklabels(top_soluc.index)
+        ax.set_title('👥 TOP 10 SOLUCIONADORES', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Quantidade', fontsize=12, fontweight='bold')
+        
+        for i, v in enumerate(top_soluc.values):
+            ax.text(v, i, f' {v}', va='center', fontweight='bold')
+        
+        ax.invert_yaxis()
+        plt.tight_layout()
+        plt.savefig('graficos/03_solucionadores.jpg', dpi=300, bbox_inches='tight')
+        graficos.append('graficos/03_solucionadores.jpg')
+        plt.close()
+        print("✅ Gráfico 3: Top Solucionadores")
+    
+    # GRÁFICO 4: Prioridade
+    if colunas['prioridade']:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+        
+        prior_counts = df_clean[colunas['prioridade']].value_counts()
+        colors = ['#EF476F', '#FF6B6B', '#FFD166', '#06D6A0', '#118AB2']
+        
+        ax1.bar(range(len(prior_counts)), prior_counts.values, 
+                color=colors[:len(prior_counts)])
+        ax1.set_xticks(range(len(prior_counts)))
+        ax1.set_xticklabels(prior_counts.index, rotation=45, ha='right')
+        ax1.set_title('🔥 PRIORIDADE', fontsize=14, fontweight='bold')
+        ax1.set_ylabel('Quantidade', fontsize=11, fontweight='bold')
+        
+        for i, v in enumerate(prior_counts.values):
+            ax1.text(i, v, str(v), ha='center', va='bottom', fontweight='bold')
+        
+        ax2.pie(prior_counts.values, labels=prior_counts.index, autopct='%1.1f%%',
+                colors=colors[:len(prior_counts)], startangle=90)
+        ax2.set_title('PROPORÇÃO', fontsize=14, fontweight='bold')
+        
+        plt.tight_layout()
+        plt.savefig('graficos/04_prioridade.jpg', dpi=300, bbox_inches='tight')
+        graficos.append('graficos/04_prioridade.jpg')
+        plt.close()
+        print("✅ Gráfico 4: Prioridade")
+    
+    # GRÁFICO 5: Grupos
+    if colunas['grupo_designado']:
+        fig, ax = plt.subplots(figsize=(14, 8))
+        
+        top_grupos = df_clean[colunas['grupo_designado']].value_counts().head(10)
+        colors = plt.cm.coolwarm(np.linspace(0.2, 0.8, len(top_grupos)))
+        
+        bars = ax.barh(range(len(top_grupos)), top_grupos.values, color=colors)
+        ax.set_yticks(range(len(top_grupos)))
+        ax.set_yticklabels(top_grupos.index)
+        ax.set_title('🏢 TOP 10 GRUPOS', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Quantidade', fontsize=12, fontweight='bold')
+        
+        for i, v in enumerate(top_grupos.values):
+            ax.text(v, i, f' {v}', va='center', fontweight='bold')
+        
+        ax.invert_yaxis()
+        plt.tight_layout()
+        plt.savefig('graficos/05_grupos.jpg', dpi=300, bbox_inches='tight')
+        graficos.append('graficos/05_grupos.jpg')
+        plt.close()
+        print("✅ Gráfico 5: Top Grupos")
+    
+    # GRÁFICO 6: Dashboard Resumido
+    fig = plt.figure(figsize=(18, 10))
+    fig.suptitle(f'📊 DASHBOARD BACKLOG FIELD - {data_analise}', 
+                 fontsize=20, fontweight='bold')
+    
+    gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
+    
+    # KPIs
+    ax_kpi = fig.add_subplot(gs[0, :])
+    ax_kpi.axis('off')
+    
+    kpi_text = f"📌 TOTAL: {len(df_clean)} chamados"
+    
+    if colunas['mns_status_ans']:
+        viol = len(df_clean[df_clean[colunas['mns_status_ans']].astype(str).str.contains('violado', case=False, na=False)])
+        kpi_text += f"  |  🔴 VIOLADO: {viol} ({viol/len(df_clean)*100:.1f}%)"
+    
+    ax_kpi.text(0.5, 0.5, kpi_text, ha='center', va='center', fontsize=16, 
+                fontweight='bold', bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.3))
+    
+    # Mini gráficos
+    plot_pos = [(1, 0), (1, 1), (1, 2)]
+    plot_idx = 0
+    
+    if colunas['status_operacional'] and plot_idx < len(plot_pos):
+        ax = fig.add_subplot(gs[plot_pos[plot_idx]])
+        data = df_clean[colunas['status_operacional']].value_counts().head(5)
+        ax.barh(range(len(data)), data.values, color='#2E86AB')
+        ax.set_yticks(range(len(data)))
+        ax.set_yticklabels(data.index, fontsize=8)
+        ax.set_title('Status', fontweight='bold', fontsize=10)
+        ax.invert_yaxis()
+        plot_idx += 1
+    
+    if colunas['prioridade'] and plot_idx < len(plot_pos):
+        ax = fig.add_subplot(gs[plot_pos[plot_idx]])
+        data = df_clean[colunas['prioridade']].value_counts().head(5)
+        ax.bar(range(len(data)), data.values, color='#FFD166')
+        ax.set_xticks(range(len(data)))
+        ax.set_xticklabels(data.index, fontsize=7, rotation=45, ha='right')
+        ax.set_title('Prioridade', fontweight='bold', fontsize=10)
+        plot_idx += 1
+    
+    if colunas['solucionador'] and plot_idx < len(plot_pos):
+        ax = fig.add_subplot(gs[plot_pos[plot_idx]])
+        data = df_clean[colunas['solucionador']].value_counts().head(5)
+        ax.barh(range(len(data)), data.values, color='#06D6A0')
+        ax.set_yticks(range(len(data)))
+        ax.set_yticklabels(data.index, fontsize=8)
+        ax.set_title('Top Solucionadores', fontweight='bold', fontsize=10)
+        ax.invert_yaxis()
+        plot_idx += 1
+    
+    plt.savefig('graficos/06_dashboard.jpg', dpi=300, bbox_inches='tight')
+    graficos.append('graficos/06_dashboard.jpg')
+    plt.close()
+    print("✅ Gráfico 6: Dashboard Resumido")
+    
+    print(f"\n✅ {len(graficos)} gráficos gerados!\n")
+    
+    # ============================================================================
+    # GERA EXCEL
+    # ============================================================================
+    
+    print("📊 Gerando Excel...\n")
+    
+    excel_file = f'Analise_Backlog_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+        # Dados completos
+        df_clean.to_excel(writer, sheet_name='Dados Completos', index=False)
+        
+        # Resumo
+        resumo = [
+            ['Data', datetime.now().strftime('%d/%m/%Y %H:%M')],
+            ['Total Chamados', len(df_clean)]
+        ]
+        
+        if colunas['mns_status_ans']:
+            viol = len(df_clean[df_clean[colunas['mns_status_ans']].astype(str).str.contains('violado', case=False, na=False)])
+            resumo.append(['ANS Violado', viol])
+            resumo.append(['% Violado', f'{viol/len(df_clean)*100:.1f}%'])
+        
+        pd.DataFrame(resumo, columns=['Métrica', 'Valor']).to_excel(
+            writer, sheet_name='Resumo', index=False
+        )
+        
+        # Status
+        if colunas['status_operacional']:
+            status = df_clean[colunas['status_operacional']].value_counts().reset_index()
+            status.columns = ['Status', 'Quantidade']
+            status['%'] = (status['Quantidade'] / len(df_clean) * 100).round(1)
+            status.to_excel(writer, sheet_name='Status', index=False)
+        
+        # Solucionadores
+        if colunas['solucionador']:
+            soluc = df_clean[colunas['solucionador']].value_counts().reset_index()
+            soluc.columns = ['Solucionador', 'Quantidade']
+            soluc['%'] = (soluc['Quantidade'] / len(df_clean) * 100).round(1)
+            soluc.to_excel(writer, sheet_name='Solucionadores', index=False)
+    
+    print(f"✅ Excel: {excel_file}\n")
+    
+    # ============================================================================
+    # GERA PDF
+    # ============================================================================
+    
+    print("📄 Gerando PDF...\n")
+    
+    pdf_file = f'Relatorio_Backlog_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+    
+    with PdfPages(pdf_file) as pdf:
+        # Capa
+        fig = plt.figure(figsize=(11, 8.5))
+        fig.text(0.5, 0.6, 'RELATÓRIO\nBACKLOG FIELD', ha='center', va='center',
+                fontsize=32, fontweight='bold')
+        fig.text(0.5, 0.4, f'{datetime.now().strftime("%d/%m/%Y")}', 
+                ha='center', va='center', fontsize=16)
+        fig.text(0.5, 0.35, f'{len(df_clean)} chamados', 
+                ha='center', va='center', fontsize=14)
+        plt.axis('off')
+        pdf.savefig(fig, bbox_inches='tight')
+        plt.close()
+        
+        # Gráficos
+        for grafico in graficos:
+            img = plt.imread(grafico)
+            fig, ax = plt.subplots(figsize=(11, 8.5))
+            ax.imshow(img)
+            ax.axis('off')
+            pdf.savefig(fig, bbox_inches='tight')
+            plt.close()
+    
+    print(f"✅ PDF: {pdf_file}\n")
+    
+    # ============================================================================
+    # GERA POWERPOINT
+    # ============================================================================
+    
+    print("📊 Gerando PowerPoint...\n")
+    
+    prs = Presentation()
+    prs.slide_width = Inches(10)
+    prs.slide_height = Inches(7.5)
+    
+    # Título
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    txBox = slide.shapes.add_textbox(Inches(1), Inches(3), Inches(8), Inches(1))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "ANÁLISE BACKLOG FIELD"
+    p.font.size = Pt(44)
+    p.font.bold = True
+    
+    txBox2 = slide.shapes.add_textbox(Inches(1), Inches(4.5), Inches(8), Inches(0.5))
+    tf2 = txBox2.text_frame
+    p2 = tf2.paragraphs[0]
+    p2.text = f'{datetime.now().strftime("%d/%m/%Y")} | {len(df_clean)} chamados'
+    p2.font.size = Pt(18)
+    
+    # Gráficos
+    for grafico in graficos:
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        slide.shapes.add_picture(grafico, Inches(0.5), Inches(0.5), 
+                                width=Inches(9), height=Inches(6.5))
+    
+    pptx_file = f'Apresentacao_Backlog_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pptx'
+    prs.save(pptx_file)
+    
+    print(f"✅ PowerPoint: {pptx_file}\n")
+    
+    # ============================================================================
+    # GERA INSIGHTS
+    # ============================================================================
+    
+    insights = gerar_insights(df_clean, colunas)
+    
+    # ============================================================================
+    # DOWNLOAD
+    # ============================================================================
+    
+    print("="*70)
+    print("✅ ANÁLISE CONCLUÍDA!".center(70))
+    print("="*70)
+    print(f"\n📁 Arquivos gerados:")
+    print(f"   • {excel_file}")
+    print(f"   • {pdf_file}")
+    print(f"   • {pptx_file}")
+    print(f"   • {len(graficos)} gráficos JPG")
+    print("\n💾 Baixando arquivos...\n")
+    
+    try:
+        files.download(excel_file)
+        files.download(pdf_file)
+        files.download(pptx_file)
+        print("\n✅ Downloads iniciados!")
+    except:
+        print("\n⚠️ Download manual: clique nos arquivos à esquerda")
+    
+    print("\n🎉 PRONTO PARA APRESENTAR! 🚀\n")
+    print("="*70)
