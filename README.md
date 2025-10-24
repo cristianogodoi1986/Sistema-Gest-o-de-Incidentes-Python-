@@ -1,11 +1,4 @@
 
-
----
-
-````markdown
-<!-- Banner Superior -->
-<div align="center">
-
 # ⚙️ Sistema de Gestão de Incidentes (Python)
 
 ![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-blue)
